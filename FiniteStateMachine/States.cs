@@ -6,9 +6,17 @@ using System.Threading.Tasks;
 
 namespace FiniteStateMachine
 {
+    public enum CharType
+    {
+        Identificator = 1,
+        OpenScope = 2,
+        CloseScope = 3,
+        Const = 4,
+        Comma = 5
+    }
     public enum CharState
     {
-        Exception = 0,
+        Exception = 0,  
         Space = 1,
         UndefinedIdentificator = 2,
         OpenScope = 3,
@@ -19,26 +27,62 @@ namespace FiniteStateMachine
         OuterComma = 8
     }
     class States
-    {
-        public Dictionary<CharState, int[9]> PossibleStates = new Dictionary<CharState, int[9]>()
+    {   
+        public static readonly Dictionary<CharType, int[]> PossibleStates = new Dictionary<CharType, int[]>
         {
-            { CharState.UndefinedIdentificator, new int[9] {0, 0, 0, 4, 0, 4, 0, 0, 0} },
-            { CharState.OpenScope, new int[9] {0, 0, 3, 0, 0, 0, 0, 0, 0} },
-            { CharState.Const, new int[9] {0, 0, 0, 4, 0, 4, 0, 0, 0} },
-            { CharState.InnerComma, new int[9] {0, 2, 0, 6, 0, 6, 0, 0, 2} },
-            { CharState.Space, new int[9] {0, 2, 0, 6, 0, 6, 0, 0, 2} },
-            { CharState.Space, new int[9] {0, 2, 0, 6, 0, 6, 0, 0, 2} },
-            { CharState.Space, new int[9] {0, 2, 0, 6, 0, 6, 0, 0, 2} },
+            /* перевёрнутый вариант таблицы, которую в классе делали
+             * только где ошибка Е была - я сделал индекс 0             */         
+                                   
+            { CharType.Identificator,   new[] {0, 2, 0, 6, 0, 6, 0, 0, 2} },
+            { CharType.Const,           new[] {0, 0, 0, 4, 0, 4, 0, 0, 0} },
+            { CharType.Comma,           new[] {0, 0, 8, 0, 5, 0, 5, 8, 0} },
+            { CharType.OpenScope,       new[] {0, 0, 3, 0, 0, 0, 0, 0, 0} },
+            { CharType.CloseScope,      new[] {0, 0, 0, 0, 7, 0, 7, 0, 0} }
         };
-        static public void QueryCode(string input)
+        public static void QueryCode(string input)
         {
             var queue = new Queue<char>(input.ToCharArray()); //LIFO
-            CharState currentState;
+
+            CharState currentState = CharState.Space;
+            var currentIndex = 0;
+
             while (queue.Any())
             {
+                currentIndex++;
                 var currentChar = queue.Dequeue();
+                CharType currentType;
 
+                if (currentChar >= '0' && currentChar <= '9') currentType = CharType.Const;
+                else if (currentChar == ',') currentType = CharType.Comma;
+                else if (currentChar == '(') currentType = CharType.OpenScope;
+                else if (currentChar == ')') currentType = CharType.CloseScope;
+                else currentType = CharType.Identificator;
+
+                currentState = (CharState) PossibleStates[currentType][(int) currentState];
+
+                if (currentState == CharState.Exception)
+                {
+                    EchoError(currentIndex, input, "unexpected token");
+                    return;
+                }
             }
+
+            if (currentState != CharState.UndefinedIdentificator && currentState != CharState.ClosingComma)
+            {
+                EchoError(currentIndex, input, "unexpected end");
+                return;
+            } 
+            Console.WriteLine("File successfully validated");
+        }
+
+        public static void EchoError(int errorCharIndex, string input, string message)
+        {
+            Console.WriteLine(input);
+            var pointer = "";
+            for (int i = 0; i < errorCharIndex - 1; i++) pointer += " ";
+            pointer += "^";
+            Console.WriteLine(pointer);
+            Console.WriteLine($"Compilation error at {errorCharIndex} symbol: {message}");
         }
     }
 }

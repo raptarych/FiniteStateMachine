@@ -19,8 +19,8 @@ namespace FiniteStateMachine
                     if (!input.Contains(".")) input += ".txt";
                     if (!File.Exists(input)) throw new Exception("File not found");
                     var code = File.ReadAllText(input).TrimStart(' ');
-                    if (code.ToLower().StartsWith("int")) code = code.Substring(3, code.Length - 3);
-                    Console.WriteLine(code);
+                    if (code.ToLower().StartsWith("int")) code = code.Substring(3, code.Length - 3).Trim(' ');
+                    States.QueryCode(code);
                 } catch (Exception ex)
                 {
                     Console.WriteLine(ex.Message);
