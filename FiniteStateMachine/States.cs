@@ -49,7 +49,7 @@ namespace FiniteStateMachine
             return CharType.Identificator;
         }
 
-        public static void QueryCode(string input)
+        public static void ProcessCode(string input, int line)
         {
             var queue = new Queue<char>(input.ToCharArray()); //LIFO
 
@@ -60,9 +60,7 @@ namespace FiniteStateMachine
             {
                 currentIndex++;
                 var currentChar = queue.Dequeue();
-                CharType currentType;
-
-                currentType = IdentifyCharType(currentChar);
+                var currentType = IdentifyCharType(currentChar);
 
                 currentState = (CharState) PossibleStates[currentType][(int) currentState];
 
@@ -90,27 +88,41 @@ namespace FiniteStateMachine
 
                 if (currentState == CharState.Exception)
                 {
-                    EchoError(currentIndex, input, "unexpected token");
+                    switch (currentType)
+                    {
+                        case CharType.Const:
+                            EchoError(currentIndex, input, "unexpected constant", line);
+                            break;
+                        case CharType.Identificator:
+                            EchoError(currentIndex, input, "unexpected identificator", line);
+                            break;
+                        case CharType.Comma:
+                            EchoError(currentIndex, input, "unexpected comma", line);
+                            break;
+                        case CharType.OpenScope:
+                        case CharType.CloseScope:
+                            EchoError(currentIndex, input, "unexpected scope", line);
+                            break;
+                        default:
+                            EchoError(currentIndex, input, "unexpected token", line);
+                            break;
+                    }
                     return;
                 }
             }
 
             if (currentState != CharState.UndefinedIdentificator && currentState != CharState.ClosingComma)
-            {
-                EchoError(currentIndex, input, "unexpected end");
-                return;
-            } 
-            Console.WriteLine("File successfully validated");
+                EchoError(currentIndex, input, "unexpected end", line);
         }
 
-        public static void EchoError(int errorCharIndex, string input, string message)
+        public static void EchoError(int errorCharIndex, string input, string message, int line)
         {
             Console.WriteLine(input);
             var pointer = "";
             for (int i = 0; i < errorCharIndex - 1; i++) pointer += " ";
             pointer += "^";
             Console.WriteLine(pointer);
-            Console.WriteLine($"Compilation error at {errorCharIndex} symbol: {message}");
+            throw new Exception($"Compilation error at line {line} symbol {errorCharIndex}: {message}");
         }
     }
 }

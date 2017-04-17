@@ -18,9 +18,18 @@ namespace FiniteStateMachine
                     input = input.Substring(5, input.Length - 5);
                     if (!input.Contains(".")) input += ".txt";
                     if (!File.Exists(input)) throw new Exception("File not found");
-                    var code = File.ReadAllText(input).TrimStart(' ');
-                    if (code.ToLower().StartsWith("int")) code = code.Substring(3, code.Length - 3).Trim(' ');
-                    States.QueryCode(code);
+                    var line = 0;
+                    using (var fileStream = File.OpenText(input))
+                    {
+                        while (!fileStream.EndOfStream)
+                        {
+                            line++;
+                            var code = fileStream.ReadLine();
+                            if (code.ToLower().StartsWith("int")) code = code.Substring(3, code.Length - 3).Trim(' ');
+                            States.ProcessCode(code, line);
+                        }
+                        Console.WriteLine("File successfully validated");
+                    }
                 } catch (Exception ex)
                 {
                     Console.WriteLine(ex.Message);
@@ -33,8 +42,6 @@ namespace FiniteStateMachine
             var consoleHandler = new ConWorker();
             consoleHandler.AddHandler(OnCommand);
             consoleHandler.Start();
-
-
         }
     }
 }
