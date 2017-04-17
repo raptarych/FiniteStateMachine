@@ -27,8 +27,8 @@ namespace FiniteStateMachine
         OuterComma = 8
     }
     class States
-    {   
-        public static readonly Dictionary<CharType, int[]> PossibleStates = new Dictionary<CharType, int[]>
+    {
+        private static readonly Dictionary<CharType, int[]> PossibleStates = new Dictionary<CharType, int[]>
         {
             /* перевёрнутый вариант таблицы, которую в классе делали
              * только где ошибка Е была - я сделал индекс 0             */         
@@ -39,6 +39,16 @@ namespace FiniteStateMachine
             { CharType.OpenScope,       new[] {0, 0, 3, 0, 0, 0, 0, 0, 0} },
             { CharType.CloseScope,      new[] {0, 0, 0, 0, 7, 0, 7, 0, 0} }
         };
+
+        private static CharType IdentifyCharType(char currentChar)
+        {
+            if (currentChar >= '0' && currentChar <= '9') return CharType.Const;
+            if (currentChar == ',') return CharType.Comma;
+            if (currentChar == '(') return CharType.OpenScope;
+            if (currentChar == ')') return CharType.CloseScope;
+            return CharType.Identificator;
+        }
+
         public static void QueryCode(string input)
         {
             var queue = new Queue<char>(input.ToCharArray()); //LIFO
@@ -52,13 +62,31 @@ namespace FiniteStateMachine
                 var currentChar = queue.Dequeue();
                 CharType currentType;
 
-                if (currentChar >= '0' && currentChar <= '9') currentType = CharType.Const;
-                else if (currentChar == ',') currentType = CharType.Comma;
-                else if (currentChar == '(') currentType = CharType.OpenScope;
-                else if (currentChar == ')') currentType = CharType.CloseScope;
-                else currentType = CharType.Identificator;
+                currentType = IdentifyCharType(currentChar);
 
                 currentState = (CharState) PossibleStates[currentType][(int) currentState];
+
+                if (currentType == CharType.Const && currentState != CharState.Exception)
+                {
+                    while (currentType == CharType.Const && queue.Any())
+                    {
+                        currentIndex++;
+                        currentChar = queue.Dequeue();
+                        currentType = IdentifyCharType(currentChar);
+                        if (currentType != CharType.Const) currentState = (CharState)PossibleStates[currentType][(int)currentState];
+                    }
+                }
+
+                if (currentType == CharType.Identificator && currentState != CharState.Exception)
+                {
+                    while (currentType == CharType.Identificator && queue.Any())
+                    {
+                        currentIndex++;
+                        currentChar = queue.Dequeue();
+                        currentType = IdentifyCharType(currentChar);
+                        if (currentType != CharType.Identificator) currentState = (CharState)PossibleStates[currentType][(int)currentState];
+                    }
+                }
 
                 if (currentState == CharState.Exception)
                 {
