@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace FiniteStateMachine
 {
@@ -40,6 +42,8 @@ namespace FiniteStateMachine
             var table = xlsWorker.Read(input);
 
             FiniteStates.SetTable(table);
+            FiniteStates.MinimizeAutomat();
+            xlsWorker.Write(new string(input.TakeWhile(ch => ch != '.').ToArray()) + "_optimized.xls", FiniteStates.GetTable);
             Console.WriteLine("Finite state automate successfully loaded");
         }
         static void OnCommand(string input)

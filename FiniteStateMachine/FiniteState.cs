@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace FiniteStateMachine
 {
@@ -11,31 +9,93 @@ namespace FiniteStateMachine
         private static Dictionary<string, Dictionary<string,string>> PossibleStates;
 
         public static void SetTable(Dictionary<string, Dictionary<string, string>> table) => PossibleStates = table;
+        public static Dictionary<string, Dictionary<string, string>> GetTable => PossibleStates;
         public static void ProcessCode(string input)
         {
             if (PossibleStates == null)
                 throw new Exception("Finite state machine wasn't defined");
             var queue = new Queue<char>(input.ToCharArray()); //LIFO
 
-            var currentState = PossibleStates.FirstOrDefault().Value.FirstOrDefault().Key;
-            var currentIndex = 0;
+            var currentState = PossibleStates.FirstOrDefault().Key;
 
             while (queue.Any())
             {
-                currentIndex++;
                 var currentChar = queue.Dequeue();
                 var currentType = currentChar.ToString();
 
-                if (!PossibleStates.ContainsKey(currentType)) throw new Exception($"Invalid symbol: {currentChar}");
-                currentState = PossibleStates[currentType][currentState];
+                if (!PossibleStates.FirstOrDefault().Value.ContainsKey(currentType)) throw new Exception($"Invalid symbol: {currentType}");
+                currentState = PossibleStates[currentState][currentType];
             }
 
-            var result = PossibleStates["Output"][currentState] == "1";
-            if (result)
-                Console.WriteLine("Validated");
-            else
-                Console.WriteLine("Not validated");
+            var result = PossibleStates[currentState]["Output"] == "1";
+            Console.WriteLine(result ? "Validated" : "Not validated");
         }
+
+
+
+        public static bool MinimizeAutomat()
+        {
+            var allowedSymbols = PossibleStates.FirstOrDefault()
+                .Value.Select(val => val.Key)
+                .Where(val => val != "Output")
+                .ToList();
+            var grouping = PossibleStates.GroupBy(elem => elem.Value["Output"]).ToList();
+            var currentSymbol = "";
+
+            //1) Группировка
+            string GroupingMethod(KeyValuePair<string, Dictionary<string, string>> arg)
+            {
+                var currentGroup = grouping.FirstOrDefault(gr => gr.Any(grElem => grElem.Key == arg.Key));
+                var currentGroupName = currentGroup?.Key;
+                var valid = PossibleStates[arg.Value[currentSymbol]]["Output"];
+                return $"{currentGroupName}_{currentSymbol}{valid}";
+            }
+
+            foreach (var symbol in allowedSymbols)
+            {
+                currentSymbol = symbol;
+                grouping = PossibleStates.GroupBy(GroupingMethod).ToList();
+            }
+
+            if (grouping.All(group => group.Count() <= 1))
+            {
+                Console.WriteLine("Automat already minimized");
+                return false;
+            }
+            Console.WriteLine($"Found similar states: {string.Join(",", grouping.Where(group => group.Count() > 1).Select(group => $"{{{string.Join(",", group.Select(elem => elem.Key))}}}"))}");
+
+            //2) Замена 
+
+            foreach (var group in grouping)
+            {
+                var statesToDelete = new List<string>();
+                if (group.Count() <= 1) continue;
+                var statesToMerge = group.Select(state => state.Key).ToList();
+                var finalState = statesToMerge.FirstOrDefault();
+                statesToMerge.Where(state => state != finalState).ToList().ForEach(state => statesToDelete.Add(state));
+                var listToReplace = new List<string[]>();
+
+                foreach (var state in PossibleStates)
+                {
+                    
+                    foreach (var stateLink in state.Value)
+                    {
+                        if (stateLink.Key == "Output") continue;
+                        if (statesToMerge.Contains(stateLink.Value) && finalState != stateLink.Value)
+                            listToReplace.Add(new[] { state.Key, stateLink.Key, finalState });
+                    }
+                        
+                }
+                foreach (var item in listToReplace) PossibleStates[item[0]][item[1]] = item[2];
+                foreach (var item in statesToDelete) PossibleStates.Remove(item);
+            }
+            
+            
+            Console.WriteLine("Successfully minimized!");
+            return true;
+        }
+
+        
 
         public static void EchoError(int errorCharIndex, string input, string message, int line)
         {
