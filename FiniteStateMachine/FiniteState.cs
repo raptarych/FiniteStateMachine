@@ -40,21 +40,23 @@ namespace FiniteStateMachine
                 .Where(val => val != "Output")
                 .ToList();
             var grouping = PossibleStates.GroupBy(elem => elem.Value["Output"]).ToList();
+            Console.WriteLine($"Current grouping: {string.Join(",", grouping.Select(group => $"{{{string.Join(",", group.Select(elem => elem.Key))}}}"))}");
+
             var currentSymbol = "";
 
             //1) Группировка
-            string GroupingMethod(KeyValuePair<string, Dictionary<string, string>> arg)
-            {
-                var currentGroup = grouping.FirstOrDefault(gr => gr.Any(grElem => grElem.Key == arg.Key));
-                var currentGroupName = currentGroup?.Key;
-                var valid = PossibleStates[arg.Value[currentSymbol]]["Output"];
-                return $"{currentGroupName}_{currentSymbol}{valid}";
-            }
 
             foreach (var symbol in allowedSymbols)
             {
                 currentSymbol = symbol;
-                grouping = PossibleStates.GroupBy(GroupingMethod).ToList();
+                grouping = PossibleStates.GroupBy(arg =>
+                {
+                    var currentGroup = grouping.FirstOrDefault(gr => gr.Any(grElem => grElem.Key == arg.Key));
+                    var currentGroupName = currentGroup?.Key;
+                    var valid = PossibleStates[arg.Value[currentSymbol]]["Output"];
+                    return $"{currentGroupName}_{currentSymbol}{valid}";
+                }).ToList();
+                Console.WriteLine($"Current grouping: {string.Join(",", grouping.Select(group => $"{{{string.Join(",", group.Select(elem => elem.Key))}}}"))}");
             }
 
             if (grouping.All(group => group.Count() <= 1))
