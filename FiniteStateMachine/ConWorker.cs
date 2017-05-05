@@ -4,7 +4,7 @@ namespace FiniteStateMachine
 {
     class ConWorker
     {
-        protected string InputString { get; set; }
+        private string InputString { get; set; }
         public delegate void ProcessInput(string input);
 
         private ProcessInput InputFunc;
@@ -13,9 +13,9 @@ namespace FiniteStateMachine
             Console.WriteLine("Enter command:");
             while (true)
             {
-                if (InputString == "exit") break;
                 Console.Write(">");
                 InputString = Console.ReadLine();
+                if (InputString == "exit") break;
                 InputFunc(InputString);
             }
         }

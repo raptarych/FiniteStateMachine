@@ -9,7 +9,14 @@ namespace FiniteStateMachine
         private static Dictionary<string, Dictionary<string,string>> PossibleStates;
 
         public static void SetTable(Dictionary<string, Dictionary<string, string>> table) => PossibleStates = table;
+
+        public static string CurrentFileName { get; set; }
+
         public static Dictionary<string, Dictionary<string, string>> GetTable => PossibleStates;
+
+        /// <summary>
+        /// Прогнать через конечный автомат цепочку 
+        /// </summary>
         public static void ProcessCode(string input)
         {
             if (PossibleStates == null)
@@ -31,51 +38,55 @@ namespace FiniteStateMachine
             Console.WriteLine(result ? "Validated" : "Not validated");
         }
 
+        /// <summary>
+        /// Вывод информации о текущей группировке состояний (или если математически - классы эквивалентности)
+        /// </summary>
+        public static string GroupingInfo(List<IGrouping<string, KeyValuePair<string, Dictionary<string, string>>>> grouping)
+            => string.Join(",", grouping.Select(group => $"{{{string.Join(",", group.Select(elem => elem.Key))}}}"));
 
-
+        /// <summary>
+        /// Метод минимизации, возвращает false если автомат уже дальше некуда минимизировать
+        /// </summary>
         public static bool MinimizeAutomat()
         {
-            var allowedSymbols = PossibleStates.FirstOrDefault()
+            //Формирование алфавита символов
+            var alfabet = PossibleStates.FirstOrDefault()
                 .Value.Select(val => val.Key)
                 .Where(val => val != "Output")
                 .ToList();
             //  1) Группировка
             //  1.1) 0-эквивалентность
             var grouping = PossibleStates.GroupBy(elem => elem.Value["Output"]).ToList();
-            Console.WriteLine($"Current grouping: {string.Join(",", grouping.Select(group => $"{{{string.Join(",", group.Select(elem => elem.Key))}}}"))}");
-
-            var currentSymbol = "";
-
+            Console.WriteLine($"Current grouping: {GroupingInfo(grouping)}");
 
             //  1.2) 1-эквивалентность
-            foreach (var symbol in allowedSymbols)
+            foreach (var symbol in alfabet)
             {
-                currentSymbol = symbol;
                 grouping = PossibleStates.GroupBy(arg =>
                 {
                     var currentGroup = grouping.FirstOrDefault(gr => gr.Any(grElem => grElem.Key == arg.Key));
                     var currentGroupName = currentGroup?.Key;
-                    var valid = PossibleStates[arg.Value[currentSymbol]]["Output"];
-                    return $"{currentGroupName}_{currentSymbol}{valid}";
+                    var valid = PossibleStates[arg.Value[symbol]]["Output"];
+                    return $"{currentGroupName}_{symbol}{valid}";
                 }).ToList();
-                Console.WriteLine($"Current grouping: {string.Join(",", grouping.Select(group => $"{{{string.Join(",", group.Select(elem => elem.Key))}}}"))}");
+                Console.WriteLine($"Current grouping: {GroupingInfo(grouping)}");
             }
 
             //  1.3) 2-эквивалентность
             grouping = PossibleStates.GroupBy(arg =>
             {
-                var currentGroup = grouping.FirstOrDefault(gr => gr.Any(grElem => grElem.Key == arg.Key));
+                var currentGroup = grouping.FirstOrDefault(gr => gr.Any(state => state.Key == arg.Key));
                 var currentGroupName = currentGroup?.Key;
                 var returnString = $"{currentGroupName}_";
-                foreach (var symbol in allowedSymbols)
+                foreach (var symbol in alfabet)
                 {
-                        
-                    var group2 = grouping.FirstOrDefault(gr => gr.Any(grElem => grElem.Key == arg.Value[symbol]))?.Key;
+                    var group2 = grouping.FirstOrDefault(gr => gr.Any(state => state.Key == arg.Value[symbol]))?.Key;
                     returnString += $"{symbol}{group2}";
                 }
                 return returnString;
             })
             .ToList();
+            Console.WriteLine($"Current grouping: {GroupingInfo(grouping)}");
 
             if (grouping.All(group => group.Count() <= 1))
             {
@@ -116,7 +127,7 @@ namespace FiniteStateMachine
         }
 
         
-
+        [Obsolete]
         public static void EchoError(int errorCharIndex, string input, string message, int line)
         {
             Console.WriteLine(input);
