@@ -42,9 +42,7 @@ namespace FiniteStateMachine
             var table = xlsWorker.Read(input);
 
             FiniteStates.SetTable(table);
-            FiniteStates.MinimizeAutomat();
-            xlsWorker.Write(new string(input.TakeWhile(ch => ch != '.').ToArray()) + "_optimized.xls", FiniteStates.GetTable);
-            Console.WriteLine("Finite state automate successfully loaded");
+            FiniteStates.CurrentFileName = input;
         }
         static void OnCommand(string input)
         {
@@ -59,6 +57,15 @@ namespace FiniteStateMachine
                 if (input.StartsWith("import "))
                 {
                     ImportAutomat(input);
+                    Console.WriteLine("Finite state automate successfully loaded");
+                    return;
+                }
+
+                if (input.ToLower() == "minimize")
+                {
+                    if (!FiniteStates.MinimizeAutomat()) return;
+                    var xlsWorker = new XlsWorker();
+                    xlsWorker.Write(new string(FiniteStates.CurrentFileName.TakeWhile(ch => ch != '.').ToArray()) + "_optimized.xls", FiniteStates.GetTable);
                     return;
                 }
                 FiniteStates.ProcessCode(input);
