@@ -44,22 +44,48 @@ namespace FiniteStateMachine
         public static string GroupingInfo(List<IGrouping<string, KeyValuePair<string, Dictionary<string, string>>>> grouping)
             => string.Join(",", grouping.Select(group => $"{{{string.Join(",", group.Select(elem => elem.Key))}}}"));
 
+        public static void FindUsedStates(List<string> usedStates, string currentState)
+        {
+            foreach (var state in PossibleStates[currentState])
+            {
+                if (!usedStates.Contains(state.Value) && state.Key != "Output")
+                {
+                    usedStates.Add(state.Value);
+                    FindUsedStates(usedStates, state.Value);
+                }
+            }
+        }
+
         /// <summary>
         /// Метод минимизации, возвращает false если автомат уже дальше некуда минимизировать
         /// </summary>
         public static bool MinimizeAutomat()
         {
+            // 1) Недостижимые состояния
+            // 1.1) Достижимые состояния
+            var usedStates = new List<string>();
+            var currentState = PossibleStates.FirstOrDefault().Key;
+            FindUsedStates(usedStates, currentState);
+
+            // 1.2) Вычитаем из множества всех состояний множество достижимых состояний и результат удаляем из состояний
+            var unusedStates = PossibleStates.Where(state => !usedStates.Contains(state.Key) && state.Key != "Output").Select(state => state.Key).ToList();
+            unusedStates.ForEach(state =>
+            {
+                PossibleStates.Remove(state);
+                Console.WriteLine($"Deleted unreachable state: {state}");
+            });
+
             //Формирование алфавита символов
             var alfabet = PossibleStates.FirstOrDefault()
                 .Value.Select(val => val.Key)
                 .Where(val => val != "Output")
                 .ToList();
-            //  1) Группировка
-            //  1.1) 0-эквивалентность
+            //  2) Группировка для удаления эквивалентных состояний
+            //  2.1) 0-эквивалентность
             var grouping = PossibleStates.GroupBy(elem => elem.Value["Output"]).ToList();
             Console.WriteLine($"Current grouping: {GroupingInfo(grouping)}");
 
-            //  1.2) 1-эквивалентность
+            //  2.2) 1-эквивалентность
             foreach (var symbol in alfabet)
             {
                 grouping = PossibleStates.GroupBy(arg =>
@@ -72,7 +98,7 @@ namespace FiniteStateMachine
                 Console.WriteLine($"Current grouping: {GroupingInfo(grouping)}");
             }
 
-            //  1.3) 2-эквивалентность
+            //  2.3) 2-эквивалентность
             grouping = PossibleStates.GroupBy(arg =>
             {
                 var currentGroup = grouping.FirstOrDefault(gr => gr.Any(state => state.Key == arg.Key));
@@ -95,7 +121,7 @@ namespace FiniteStateMachine
             }
             Console.WriteLine($"Found similar states: {string.Join(",", grouping.Where(group => group.Count() > 1).Select(group => $"{{{string.Join(",", group.Select(elem => elem.Key))}}}"))}");
 
-            //2) Замена 
+            //3) Замена эквивалентных состояний
 
             foreach (var group in grouping)
             {
